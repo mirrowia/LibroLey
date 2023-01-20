@@ -69,6 +69,22 @@ public class Main {
 					if (st.contains("|  0") || st.contains("|   1") || st.contains("|   2") || st.contains("|   3") || st.contains("|   4") || st.contains("|   5") || st.contains("|   6") || st.contains("|   7") || st.contains("|   8") || st.contains("|   9")) {
 
 						cabecerasProcesadas += 1;
+						
+						AsientoEnc encabezado = new AsientoEnc();
+
+						String sFecha = st.substring(12, 22).replace(".", "/");
+
+						encabezado.setNroAsiento(st.substring(3, 11));
+
+						encabezado.setFechaAsiento(encabezado.stringToDate(sFecha));
+
+						encabezado.setNDoc(st.substring(31, 41));
+
+						encabezado.setReferencia(st.substring(42, 55).trim());
+
+						encabezado.setConcepto(st.substring(56, 106).trim());
+
+						encabezadoPrevio = encabezado;
 
 						headerList.add(st);
 
@@ -98,9 +114,6 @@ public class Main {
 
 						haberEsperado = st.substring(71, 89).trim().replace(",", "");
 
-						// Cierro BufferedReader así puedo reusar el archivo
-						br.close();
-
 						DecimalFormat df = new DecimalFormat("#.##");
 
 						String sumaDebeString = df.format(sumaDebe);
@@ -110,9 +123,9 @@ public class Main {
 						sumaDebe = Double. parseDouble(sumaDebeString);
 
 						sumaHaberes = Double. parseDouble(sumaHaberesString);
-
+						
 						segmento = Integer.parseInt(encabezadoPrevio.dateToString(encabezadoPrevio.getFechaAsiento()).substring(0, 2));
-
+						
 						String mes = "";
 
 						switch(segmento) {
@@ -328,6 +341,9 @@ public class Main {
 							statement.executeUpdate("INSERT INTO AsientosTotales (Mes, Segmento, DebeEsperado, DebeProcesado, HaberEsperado, HaberProcesado, CabecerasEsperadas, CabecerasProcesadas, RegistrosEsperados, RegistrosProcesados) VALUES ('" + mes + "', " + segmento + ", '" + debeEsperado + "', '" + haberEsperado + "', '" + sumaDebe + "', '" + sumaHaberes + "', '" + cabecerasEsperadas + "', '" + cabecerasProcesadas + "', '" + registrosEsperados + "', '" + registrosProcesados + "')");
 
 							statement.close();
+							
+							// Cierro BufferedReader así puedo reusar el archivo
+							br.close();
 
 						}catch (Exception e) {
 							e.printStackTrace();
