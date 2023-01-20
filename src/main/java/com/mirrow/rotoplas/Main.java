@@ -67,8 +67,6 @@ public class Main {
 				while ((st = br.readLine()) != null) {
 
 					if (st.contains("|  0") || st.contains("|   1") || st.contains("|   2") || st.contains("|   3") || st.contains("|   4") || st.contains("|   5") || st.contains("|   6") || st.contains("|   7") || st.contains("|   8") || st.contains("|   9")) {
-
-						cabecerasProcesadas += 1;
 						
 						AsientoEnc encabezado = new AsientoEnc();
 
@@ -89,8 +87,6 @@ public class Main {
 						headerList.add(st);
 
 					} else if(st.contains("|     0") || st.contains("|     1") || st.contains("|     2") || st.contains("|     3") || st.contains("|     4") || st.contains("|     5") || st.contains("|     6") || st.contains("|     7") || st.contains("|     8") || st.contains("|     9")) {
-
-						registrosProcesados += 1;
 
 						bodyList.add(st);
 
@@ -274,6 +270,8 @@ public class Main {
 
 									statement.executeUpdate("INSERT INTO AsientosEnc (NroAsiento, FechaAsiento, NDoc, Referencia, Concepto) VALUES (" + encabezado.getNroAsiento() + ", #" + encabezado.dateToString(encabezado.getFechaAsiento()) + "#, '" + encabezado.getNDoc() + "', '" + encabezado.getReferencia() + "', '" + encabezado.getConcepto() + "')");
 
+									cabecerasProcesadas += 1;
+									
 									statement.close();
 
 								} catch (Exception e) {
@@ -323,6 +321,8 @@ public class Main {
 
 									statement.executeUpdate("INSERT INTO AsientoDetalle (NroAsiento, FechaAsiento, NroRenglon, NroCta, NombreCta, NIF, ImpDebe, ImpHaber, Moneda, Concepto) VALUES (" + encabezadoPrevio.getNroAsiento() + ", #" + encabezadoPrevio.dateToString(encabezadoPrevio.getFechaAsiento()) + "#, " + detalle.getNroRenglon() + ", '" + detalle.getNroCta() + "', '" + detalle.getNombreCta() + "', '" + detalle.getNIF() + "', " + detalle.getImpDebe() + ", " + detalle.getImpHaber() + ", '" + detalle.getMoneda() + "', '" + detalle.getConcepto() + "')");
 
+									registrosProcesados += 1;
+									
 									statement.close();
 
 								} catch (Exception e) {
@@ -342,9 +342,6 @@ public class Main {
 
 							statement.close();
 							
-							// Cierro BufferedReader así puedo reusar el archivo
-							br.close();
-
 						}catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -352,6 +349,9 @@ public class Main {
 					}
 
 				}
+				
+				// Cierro BufferedReader así puedo reusar el archivo
+				br.close();
 
 			}
 
