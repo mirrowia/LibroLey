@@ -345,7 +345,11 @@ public class Main {
 						}catch (Exception e) {
 							e.printStackTrace();
 						}
+						
+						break;
 
+					}else {
+						br.readLine();
 					}
 
 				}
