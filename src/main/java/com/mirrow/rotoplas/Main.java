@@ -25,15 +25,21 @@ public class Main {
 
 		File[] files;
 		int segmento = 0;
+		int segmentoArchivoAnterior = 0;
+		int ejercicio = 0;
 		int cabecerasEsperadas = 0;
 		int registrosEsperados = 0;
 		int cabecerasProcesadas = 0;
 		int registrosProcesados = 0;
 		String debeEsperado = "";
 		String haberEsperado = "";
+		String sumaDebeString = "";
 		double sumaDebe = 0;
+		String sumaHaberesString = "";
 		double sumaHaberes = 0;
-
+		DecimalFormat df = new DecimalFormat("#.##");
+		String mes = "";
+		boolean finalArchivo = false;
 
 		// Crea un JFileChooser
 		final JFileChooser fc = new JFileChooser();
@@ -49,9 +55,9 @@ public class Main {
 			AsientoEnc encabezadoPrevio = new AsientoEnc();
 
 			// Se crea una lista para almacenar las lineas que se van a leer
-			List<String> headerList = new ArrayList<String>();
+			List<AsientoEnc> headerList = new ArrayList<AsientoEnc>();
 
-			List<String> bodyList = new ArrayList<String>();
+			List<AsientoDetalle> bodyList = new ArrayList<AsientoDetalle>();
 
 			for (File file : files) {
 
@@ -63,32 +69,96 @@ public class Main {
 				// Variable que va a almacenar los renglones
 				String st;
 
+				// Recorre el archivo hasta encontrar año
+				while ((st = br.readLine()) != null) {
+
+					if (st.contains("Ejercicio:          ")) {
+
+						ejercicio = Integer.parseInt(st.substring(20,24)) ;
+
+						br.close();
+
+						break;
+
+					}
+
+				}
+
+				br = new BufferedReader(new InputStreamReader(new FileInputStream(file), inputCharset));
+
+				// Recorre el archivo hasta encontrar mes
+				while ((st = br.readLine()) != null) {
+
+					if (st.contains("Desde ")) {
+
+						segmento = Integer.parseInt(st.substring(9,11));
+
+						mes = getMonth(segmento);
+
+						br.close();
+
+						break;
+
+					}
+
+				}
+
+				if (segmentoArchivoAnterior != segmento) {
+					cabecerasEsperadas = 0;
+					registrosEsperados = 0;
+					cabecerasProcesadas = 0;
+					registrosProcesados = 0;
+					sumaDebe = 0;
+					sumaHaberes = 0;
+				}
+
+				br = new BufferedReader(new InputStreamReader(new FileInputStream(file), inputCharset));
 				// Recorre el archivo hasta que no tenga mas información
 				while ((st = br.readLine()) != null) {
 
-					if (st.contains("|  0") || st.contains("|   1") || st.contains("|   2") || st.contains("|   3") || st.contains("|   4") || st.contains("|   5") || st.contains("|   6") || st.contains("|   7") || st.contains("|   8") || st.contains("|   9")) {
-						
-						AsientoEnc encabezado = new AsientoEnc();
+					if (st.contains("|  0") ||  st.contains("|   1") || st.contains("|   2") || st.contains("|   3") || st.contains("|   4") || st.contains("|   5") || st.contains("|   6") || st.contains("|   7") || st.contains("|   8") || st.contains("|   9")) {
 
-						String sFecha = st.substring(12, 22).replace(".", "/");
+						AsientoEnc encabezado = new AsientoEnc();
 
 						encabezado.setNroAsiento(st.substring(3, 11));
 
-						encabezado.setFechaAsiento(encabezado.stringToDate(sFecha));
+						encabezado.setFechaAsiento(encabezado.stringToDate(st.substring(12, 22).replace(".", "/")));
 
 						encabezado.setNDoc(st.substring(31, 41));
 
-						encabezado.setReferencia(st.substring(42, 55).trim());
+						encabezado.setReferencia((st.substring(42, 55).trim()).replace("'", "''"));
 
-						encabezado.setConcepto(st.substring(56, 106).trim());
+						encabezado.setConcepto((st.substring(56, 106).trim()).replace("'", "''"));
 
 						encabezadoPrevio = encabezado;
 
-						headerList.add(st);
+						headerList.add(encabezado);
 
 					} else if(st.contains("|     0") || st.contains("|     1") || st.contains("|     2") || st.contains("|     3") || st.contains("|     4") || st.contains("|     5") || st.contains("|     6") || st.contains("|     7") || st.contains("|     8") || st.contains("|     9")) {
 
-						bodyList.add(st);
+						AsientoDetalle detalle = new AsientoDetalle();
+
+						detalle.setNroAsiento(encabezadoPrevio.getNroAsiento());
+
+						detalle.setFechaAsiento(encabezadoPrevio.getFechaAsiento());
+
+						detalle.setNroRenglon(st.substring(6, 9).trim());
+
+						detalle.setNroCta(st.substring(10, 16).trim());
+
+						detalle.setNombreCta(st.substring(18, 38).trim().replace("'", "''"));
+
+						detalle.setNIF(st.substring(39, 52).trim());
+
+						detalle.setImpDebe(st.substring(54, 70).trim().replace(",", ""));
+
+						detalle.setImpHaber(st.substring(72, 89).trim().replace(",", ""));
+
+						detalle.setMoneda(st.substring(91, 94).trim());
+
+						detalle.setConcepto(st.substring(96, 106).trim());
+
+						bodyList.add(detalle);
 
 					}else if(st.contains("|Registros ")){ //Calculo los registros totales esperados
 
@@ -110,255 +180,206 @@ public class Main {
 
 						haberEsperado = st.substring(71, 89).trim().replace(",", "");
 
-						DecimalFormat df = new DecimalFormat("#.##");
+						sumaDebeString = df.format(sumaDebe);
 
-						String sumaDebeString = df.format(sumaDebe);
-
-						String sumaHaberesString = df.format(sumaHaberes);
+						sumaHaberesString = df.format(sumaHaberes);
 
 						sumaDebe = Double. parseDouble(sumaDebeString);
 
 						sumaHaberes = Double. parseDouble(sumaHaberesString);
-						
+
 						segmento = Integer.parseInt(encabezadoPrevio.dateToString(encabezadoPrevio.getFechaAsiento()).substring(0, 2));
-						
-						String mes = "";
 
-						switch(segmento) {
+						mes = getMonth(segmento);
 
-						case 1: {
+						finalArchivo = true;
 
-							mes = "Enero";
-							break;
-
-						}
-
-						case 2: {
-
-							mes = "Febrero";
-							break;
-
-						}
-
-						case 3: {
-
-							mes = "Marzo";
-							break;
-
-						}
-
-						case 4: {
-
-							mes = "Abril";
-							break;
-
-						}
-
-						case 5: {
-
-							mes = "Mayo";
-							break;
-
-						}
-
-						case 6: {
-
-							mes = "Junio";
-							break;
-
-						}
-
-						case 7: {
-
-							mes = "Julio";
-							break;
-
-						}
-
-						case 8: {
-
-							mes = "Agosto";
-							break;
-
-						}
-
-						case 9: {
-
-							mes = "Septiembre";
-							break;
-
-						}
-
-						case 10: {
-
-							mes = "Octubre";
-							break;
-
-						}
-
-						case 11: {
-
-							mes = "Noviembre";
-							break;
-
-						}
-
-						case 12: {
-
-							mes = "Diciembre";
-							break;
-
-						} default: {
-
-							mes = "???";
-							break;
-						}
-
-						}
-
-						//Genero una instancia de la clase Connection
-
-						try {
-
-							Class.forName("net.ucanaccess.jdbc.UcanaccessDriver");
-
-						}
-						catch(ClassNotFoundException cnfex) {
-
-							System.out.println("Problema al cargar o registrar el controlador MS Access JDBC");
-
-							cnfex.printStackTrace();
-
-						}
-
-						// Abro la conexión a la base de datos
-						try {
-
-							String msAccDB = "RotoPlasDatos.accdb";
-
-							String dbURL = "jdbc:ucanaccess://" + msAccDB; 
-
-							//Creo y obtengo conexión usando la clase DriverManager
-
-							Connection connection = DriverManager.getConnection(dbURL); 
-
-							//Recorro los encabezados
-							for (String string : headerList) {
-
-								AsientoEnc encabezado = new AsientoEnc();
-
-								String sFecha = string.substring(12, 22).replace(".", "/");
-
-								encabezado.setNroAsiento(string.substring(3, 11));
-
-								encabezado.setFechaAsiento(encabezado.stringToDate(sFecha));
-
-								encabezado.setNDoc(string.substring(31, 41));
-
-								encabezado.setReferencia(string.substring(42, 55).trim());
-
-								encabezado.setConcepto(string.substring(56, 106).trim());
-
-								encabezadoPrevio = encabezado;
-
-
-								try {
-
-									Statement statement = connection.createStatement();
-
-									System.out.println("INSERT INTO AsientosEnc (NroAsiento, FechaAsiento, NDoc, Referencia, Concepto) VALUES (" + encabezado.getNroAsiento() + ", " + encabezado.dateToString(encabezado.getFechaAsiento()) + ", '" + encabezado.getNDoc() + "', '" + encabezado.getReferencia() + "', '" + encabezado.getConcepto() + "')");
-
-									statement.executeUpdate("INSERT INTO AsientosEnc (NroAsiento, FechaAsiento, NDoc, Referencia, Concepto) VALUES (" + encabezado.getNroAsiento() + ", #" + encabezado.dateToString(encabezado.getFechaAsiento()) + "#, '" + encabezado.getNDoc() + "', '" + encabezado.getReferencia() + "', '" + encabezado.getConcepto() + "')");
-
-									cabecerasProcesadas += 1;
-									
-									statement.close();
-
-								} catch (Exception e) {
-
-									e.printStackTrace();
-
-									System.exit(0);
-
-								}
-
-							}
-
-							//Recorro el cuerpo de los asintos
-							for (String string : bodyList) {
-
-								AsientoDetalle detalle = new AsientoDetalle();
-
-								detalle.setNroAsiento(encabezadoPrevio.getNroAsiento());
-
-								detalle.setFechaAsiento(encabezadoPrevio.getFechaAsiento());
-
-								detalle.setNroRenglon(string.substring(6, 9).trim());
-
-								detalle.setNroCta(string.substring(10, 16).trim());
-
-								detalle.setNombreCta(string.substring(18, 38).trim().replace("'", "''"));
-
-								detalle.setNIF(string.substring(39, 52).trim());
-
-								detalle.setImpDebe(string.substring(54, 70).trim().replace(",", ""));
-
-								detalle.setImpHaber(string.substring(72, 89).trim().replace(",", ""));
-
-								detalle.setMoneda(string.substring(91, 94).trim());
-
-								detalle.setConcepto(string.substring(96, 106).trim());
-
-								sumaDebe += Double. parseDouble(detalle.getImpDebe());
-
-								sumaHaberes += Double. parseDouble(detalle.getImpHaber());
-
-								try {
-
-									Statement statement = connection.createStatement();
-
-									System.out.println("INSERT INTO AsientoDetalle (NroAsiento, FechaAsiento, NroRenglon, NroCta, NombreCta, NIF, ImpDebe, ImpHaber, Moneda, Concepto) VALUES (" + encabezadoPrevio.getNroAsiento() + ", #" + encabezadoPrevio.dateToString(encabezadoPrevio.getFechaAsiento()) + "#, '" + detalle.getNroRenglon() + "', '" + detalle.getNroCta() + "', '" + detalle.getNombreCta() + "', '" + detalle.getNIF() + "', '" + detalle.getImpDebe() + "', '" + detalle.getImpHaber() + "', '" + detalle.getMoneda() + "', '" + detalle.getConcepto() + "')");
-
-									statement.executeUpdate("INSERT INTO AsientoDetalle (NroAsiento, FechaAsiento, NroRenglon, NroCta, NombreCta, NIF, ImpDebe, ImpHaber, Moneda, Concepto) VALUES (" + encabezadoPrevio.getNroAsiento() + ", #" + encabezadoPrevio.dateToString(encabezadoPrevio.getFechaAsiento()) + "#, " + detalle.getNroRenglon() + ", '" + detalle.getNroCta() + "', '" + detalle.getNombreCta() + "', '" + detalle.getNIF() + "', " + detalle.getImpDebe() + ", " + detalle.getImpHaber() + ", '" + detalle.getMoneda() + "', '" + detalle.getConcepto() + "')");
-
-									registrosProcesados += 1;
-									
-									statement.close();
-
-								} catch (Exception e) {
-
-									e.printStackTrace();
-
-									System.exit(0);
-								}
-
-							}
-
-							Statement statement = connection.createStatement();
-
-							System.out.println("INSERT INTO AsientosTotales (Mes, Segmento, DebeEsperado, DebeProcesado, HaberEsperado, HaberProcesado, CabecerasEsperadas, CabecerasProcesadas, RegistrosEsperados, RegistrosProcesados) VALUES ('" + mes + "', " + segmento + ", " + debeEsperado + ", " + haberEsperado + ", " + sumaDebe + ", " + sumaHaberes + ", " + cabecerasEsperadas + ", " + cabecerasProcesadas + ", " + registrosEsperados + ", " + registrosProcesados + ")");
-
-							statement.executeUpdate("INSERT INTO AsientosTotales (Mes, Segmento, DebeEsperado, DebeProcesado, HaberEsperado, HaberProcesado, CabecerasEsperadas, CabecerasProcesadas, RegistrosEsperados, RegistrosProcesados) VALUES ('" + mes + "', " + segmento + ", '" + debeEsperado + "', '" + haberEsperado + "', '" + sumaDebe + "', '" + sumaHaberes + "', '" + cabecerasEsperadas + "', '" + cabecerasProcesadas + "', '" + registrosEsperados + "', '" + registrosProcesados + "')");
-
-							statement.close();
-							
-						}catch (Exception e) {
-							e.printStackTrace();
-						}
-						
 						break;
 
-					}else {
-						br.readLine();
 					}
 
 				}
-				
 				// Cierro BufferedReader así puedo reusar el archivo
 				br.close();
 
+				if (finalArchivo) {
+					//Genero una instancia de la clase Connection
+					try {
+
+						Class.forName("net.ucanaccess.jdbc.UcanaccessDriver");
+
+					}
+					catch(ClassNotFoundException cnfex) {
+
+						System.out.println("Problema al cargar o registrar el controlador MS Access JDBC");
+
+						cnfex.printStackTrace();
+
+					}
+
+					// Abro la conexión a la base de datos
+					try {
+
+						String msAccDB = "RotoPlasDatos.accdb";
+
+						String dbURL = "jdbc:ucanaccess://" + msAccDB; 
+
+						//Creo y obtengo conexión usando la clase DriverManager
+
+						Connection connection = DriverManager.getConnection(dbURL); 
+
+						//Recorro los encabezados
+						for (AsientoEnc encabezado : headerList) {
+
+							//encabezadoPrevio = encabezado;
+
+							try {
+
+								Statement statement = connection.createStatement();
+
+								System.out.println("INSERT INTO AsientosEnc (NroAsiento, FechaAsiento, NDoc, Referencia, Concepto) VALUES (" + encabezado.getNroAsiento() + ", " + encabezado.dateToString(encabezado.getFechaAsiento()) + ", '" + encabezado.getNDoc() + "', '" + encabezado.getReferencia() + "', '" + encabezado.getConcepto() + "')");
+
+								statement.executeUpdate("INSERT INTO AsientosEnc (NroAsiento, FechaAsiento, NDoc, Referencia, Concepto) VALUES (" + encabezado.getNroAsiento() + ", #" + encabezado.dateToString(encabezado.getFechaAsiento()) + "#, '" + encabezado.getNDoc() + "', '" + encabezado.getReferencia() + "', '" + encabezado.getConcepto() + "')");
+
+								cabecerasProcesadas += 1;
+
+								statement.close();
+
+							} catch (Exception e) {
+
+								e.printStackTrace();
+
+								System.exit(0);
+
+							}
+
+						}
+
+						//Recorro el cuerpo de los asintos
+						for (AsientoDetalle detalle : bodyList) {
+
+							sumaDebe += Double. parseDouble(detalle.getImpDebe());
+
+							sumaHaberes += Double. parseDouble(detalle.getImpHaber());
+
+							try {
+
+								Statement statement = connection.createStatement();
+
+								System.out.println("INSERT INTO AsientoDetalle (NroAsiento, FechaAsiento, NroRenglon, NroCta, NombreCta, NIF, ImpDebe, ImpHaber, Moneda, Concepto) VALUES (" + detalle.getNroAsiento() + ", #" + detalle.dateToString(detalle.getFechaAsiento()) + "#, '" + detalle.getNroRenglon() + "', '" + detalle.getNroCta() + "', '" + detalle.getNombreCta() + "', '" + detalle.getNIF() + "', '" + detalle.getImpDebe() + "', '" + detalle.getImpHaber() + "', '" + detalle.getMoneda() + "', '" + detalle.getConcepto() + "')");
+
+								statement.executeUpdate("INSERT INTO AsientoDetalle (NroAsiento, FechaAsiento, NroRenglon, NroCta, NombreCta, NIF, ImpDebe, ImpHaber, Moneda, Concepto) VALUES (" + detalle.getNroAsiento() + ", #" + detalle.dateToString(detalle.getFechaAsiento()) + "#, " + detalle.getNroRenglon() + ", '" + detalle.getNroCta() + "', '" + detalle.getNombreCta() + "', '" + detalle.getNIF() + "', " + detalle.getImpDebe() + ", " + detalle.getImpHaber() + ", '" + detalle.getMoneda() + "', '" + detalle.getConcepto() + "')");
+
+								registrosProcesados += 1;
+
+								statement.close();
+
+							} catch (Exception e) {
+
+								e.printStackTrace();
+
+							}
+
+						}
+
+						Statement statement = connection.createStatement();
+
+						sumaDebeString = df.format(sumaDebe);
+
+						sumaHaberesString = df.format(sumaDebe);
+
+						System.out.println("INSERT INTO AsientosTotales (Ejercicio, Mes, Segmento, DebeEsperado, DebeProcesado, HaberEsperado, HaberProcesado, CabecerasEsperadas, CabecerasProcesadas, RegistrosEsperados, RegistrosProcesados) VALUES (" + ejercicio + ", '" + mes + "', " + segmento + ", '" + debeEsperado + "', '" + haberEsperado + "', '" + sumaDebeString + "', '" + sumaHaberesString + "', '" + cabecerasEsperadas + "', '" + cabecerasProcesadas + "', '" + registrosEsperados + "', '" + registrosProcesados + "')");
+
+						statement.executeUpdate("INSERT INTO AsientosTotales (Ejercicio, Mes, Segmento, DebeEsperado, DebeProcesado, HaberEsperado, HaberProcesado, CabecerasEsperadas, CabecerasProcesadas, RegistrosEsperados, RegistrosProcesados) VALUES (" + ejercicio + ", '" + mes + "', " + segmento + ", '" + debeEsperado + "', '" + haberEsperado + "', '" + sumaDebeString + "', '" + sumaHaberesString + "', '" + cabecerasEsperadas + "', '" + cabecerasProcesadas + "', '" + registrosEsperados + "', '" + registrosProcesados + "')");
+
+						statement.close();
+
+						//Inicializo las variables
+
+						segmento = 0;
+						segmentoArchivoAnterior = 0;
+						cabecerasEsperadas = 0;
+						registrosEsperados = 0;
+						cabecerasProcesadas = 0;
+						registrosProcesados = 0;
+						debeEsperado = "";
+						haberEsperado = "";
+						sumaDebeString = "";
+						sumaDebe = 0;
+						sumaHaberesString = "";
+						sumaHaberes = 0;
+						mes = "";
+						st = null;
+						finalArchivo = false;
+
+					}catch (Exception e) {
+						e.printStackTrace();
+					}
+
+				}
 			}
 
 		}
 	}
+
+	public static String getMonth(int month) {
+
+		switch(month) {
+
+		case 1: {
+			return "Enero";
+		}
+
+		case 2: {
+			return "Febrero";
+		}
+
+		case 3: {
+			return "Marzo";
+		}
+
+		case 4: {
+			return "Abril";
+		}
+
+		case 5: {
+			return "Mayo";
+		}
+
+		case 6: {
+			return "Junio";
+		}
+
+		case 7: {
+			return "Julio";
+		}
+
+		case 8: {
+			return "Agosto";
+		}
+
+		case 9: {
+			return "Septiembre";
+		}
+
+		case 10: {
+			return "Octubre";
+		}
+
+		case 11: {
+			return "Noviembre";
+		}
+
+		case 12: {
+			return "Diciembre";
+		} 
+
+		default: {
+			return "???";
+		}
+
+		}
+
+	}
+
 }

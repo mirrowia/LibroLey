@@ -1,5 +1,7 @@
 package com.mirrow.rotoplas;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class AsientoDetalle {
@@ -77,6 +79,15 @@ public class AsientoDetalle {
 	public void setConcepto(String concepto) {
 		Concepto = concepto;
 	}
+
+	//Methods
 	
+	public String dateToString (Date date) {
+		
+		DateFormat dateFormat = new SimpleDateFormat("MM/dd/YYYY");
+		String stringDate = dateFormat.format(date);
+
+		return stringDate;
+	}
 	
 }
